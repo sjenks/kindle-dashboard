@@ -20,6 +20,8 @@ GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
 
 cp kual/kidsdash/config.xml kual/kidsdash/menu.json "$ext/"
 cp config.yaml events.yaml "$ext/"
+# Private calendar links: never in git (see .gitignore), only on the Kindle.
+[ -f calendars.txt ] && cp calendars.txt "$ext/"
 [ -d pictures ] && cp -R pictures/. "$ext/pictures/"
 
 # Shell scripts must have Unix line endings or the Kindle refuses to run them.
@@ -33,10 +35,13 @@ echo "Built $ext"
 if [ "$1" = "--install" ]; then
 	kindle=/Volumes/Kindle
 	[ -d "$kindle/extensions" ] || { echo "No Kindle with an extensions folder at $kindle" >&2; exit 1; }
-	# Keep the Kindle's log between installs; replace everything else.
+	# Keep the Kindle's log between installs, and its calendars.txt if there is
+	# none here; replace everything else.
 	rm -rf "$kindle/extensions/kidsdash.new"
 	cp -R "$ext" "$kindle/extensions/kidsdash.new"
-	for keep in kidsdash.log kidsdash.log.old; do
+	keep_files="kidsdash.log kidsdash.log.old"
+	[ -f calendars.txt ] || keep_files="$keep_files calendars.txt"
+	for keep in $keep_files; do
 		[ -f "$kindle/extensions/kidsdash/$keep" ] && cp "$kindle/extensions/kidsdash/$keep" "$kindle/extensions/kidsdash.new/"
 	done
 	rm -rf "$kindle/extensions/kidsdash"

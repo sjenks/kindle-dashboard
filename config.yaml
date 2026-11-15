@@ -14,8 +14,11 @@ week_start: sunday    # sunday or monday
 
 # Calendar feeds (private ICS links from Google Calendar, iCloud, Outlook...).
 # Google: Settings > your calendar > "Secret address in iCal format".
+# Each link lets anyone who has it read that calendar, so do NOT put them in
+# this file (it is in git).  Put them in calendars.txt next to this file, one
+# per line; calendars.txt is git-ignored and gets copied onto the Kindle.
 calendars: []
-#  - https://calendar.google.com/calendar/ical/.../basic.ics
+calendars_file: calendars.txt
 
 # Extra events and picture choices live in this file.
 events_file: events.yaml

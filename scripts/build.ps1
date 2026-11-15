@@ -22,6 +22,8 @@ if ($built -ne 0) { throw 'build failed' }
 
 Copy-Item kual\kidsdash\config.xml, kual\kidsdash\menu.json $ext
 Copy-Item config.yaml, events.yaml $ext
+# Private calendar links: never in git (see .gitignore), only on the Kindle.
+if (Test-Path calendars.txt) { Copy-Item calendars.txt $ext }
 if (Test-Path pictures) { Copy-Item pictures\* (Join-Path $ext 'pictures') -Recurse }
 
 # Shell scripts must have Unix line endings or the Kindle refuses to run them.

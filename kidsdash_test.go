@@ -2,6 +2,8 @@ package main
 
 import (
 	"image"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -145,5 +147,24 @@ func TestPictureFor(t *testing.T) {
 		if got := pictureFor(Event{Title: title}, cfg); got != want {
 			t.Errorf("pictureFor(%q) = %q, want %q", title, got, want)
 		}
+	}
+}
+
+func TestCalendarsFile(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("calendars: [https://a.example/a.ics]\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "calendars.txt"), []byte("# family\nwebcal://b.example/b.ics\n\n  https://c.example/c.ics  \n"), 0o644)
+	cfg, err := loadConfig(filepath.Join(dir, "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"https://a.example/a.ics", "webcal://b.example/b.ics", "https://c.example/c.ics"}
+	if strings.Join(cfg.Calendars, " ") != strings.Join(want, " ") {
+		t.Errorf("Calendars = %v, want %v", cfg.Calendars, want)
+	}
+
+	os.Remove(filepath.Join(dir, "calendars.txt"))
+	if cfg, err = loadConfig(filepath.Join(dir, "config.yaml")); err != nil || len(cfg.Calendars) != 1 {
+		t.Errorf("without calendars.txt: %v, %v", cfg.Calendars, err)
 	}
 }

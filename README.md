@@ -10,8 +10,10 @@ buttons returns to the normal Kindle.
 
 ## Set it up
 
-1. Edit `config.yaml`: timezone, latitude/longitude, units, calendar links and
-   the unlock sequence.
+1. Edit `config.yaml`: timezone, latitude/longitude, units and the unlock
+   sequence. Private calendar (ICS) links go in `calendars.txt`, one per line,
+   not in `config.yaml`: each link is a password to its calendar, and
+   `calendars.txt` is git-ignored so it never reaches GitHub.
 2. Edit `events.yaml` for birthdays and other events. Photos of your own
    (`grandma.jpg`) go in a `pictures` folder next to it.
 3. See how it looks on this PC:

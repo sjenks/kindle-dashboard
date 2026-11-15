@@ -21,10 +21,13 @@ type Config struct {
 	// "sunday" or "monday"
 	WeekStart string `yaml:"week_start"`
 
-	Calendars  []string          `yaml:"calendars"`
-	EventsFile string            `yaml:"events_file"`
-	DaysAhead  int               `yaml:"days_ahead"`
-	Keywords   map[string]string `yaml:"keywords"`
+	Calendars []string `yaml:"calendars"`
+	// A file of calendar links, one per line, kept out of git because each
+	// link grants access to its calendar. Added to Calendars.
+	CalendarsFile string            `yaml:"calendars_file"`
+	EventsFile    string            `yaml:"events_file"`
+	DaysAhead     int               `yaml:"days_ahead"`
+	Keywords      map[string]string `yaml:"keywords"`
 
 	WeatherMinutes  int `yaml:"weather_minutes"`
 	CalendarMinutes int `yaml:"calendar_minutes"`
@@ -72,6 +75,14 @@ func loadConfig(path string) (*Config, error) {
 	if cfg.Clock != "24h" {
 		cfg.Clock = "12h"
 	}
+	if cfg.CalendarsFile == "" {
+		cfg.CalendarsFile = "calendars.txt"
+	}
+	extra, err := readCalendarsFile(cfg.path(cfg.CalendarsFile))
+	if err != nil {
+		return nil, err
+	}
+	cfg.Calendars = append(cfg.Calendars, extra...)
 	if cfg.EventsFile == "" {
 		cfg.EventsFile = "events.yaml"
 	}
@@ -120,4 +131,25 @@ func (c *Config) cachePath(name string) string {
 	dir := c.path("cache")
 	os.MkdirAll(dir, 0o755)
 	return filepath.Join(dir, name)
+}
+
+// readCalendarsFile reads calendar links, one per line; blank lines and lines
+// starting with # are skipped. A missing file means no extra calendars.
+func readCalendarsFile(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var urls []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		urls = append(urls, line)
+	}
+	return urls, nil
 }
