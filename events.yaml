@@ -1,0 +1,32 @@
+# Events shown under "coming up", on top of anything from your calendar feeds.
+#
+#   date:    YYYY-MM-DD for a one-off, or MM-DD for something every year
+#   time:    optional, HH:MM (24-hour)
+#   title:   what to show
+#   picture: optional.  A built-in name (see assets\manifest.txt) or a file you
+#            put in the pictures folder, e.g. "grandma.jpg".  Left out, a
+#            picture is chosen from words in the title.
+#
+# If an event here has the same day and title as a calendar event, they are
+# merged, so this is also how you give a calendar event a specific picture.
+
+events:
+  - date: 12-25
+    title: Christmas
+    picture: christmas-tree
+
+  - date: 10-31
+    title: Halloween
+    picture: pumpkin
+
+  - date: 01-01
+    title: New Year
+    picture: fireworks
+
+  # - date: 03-14
+  #   title: Mia's birthday
+  #   picture: cake
+  #
+  # - date: 2026-11-20
+  #   time: "15:30"
+  #   title: Dentist

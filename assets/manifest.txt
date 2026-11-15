@@ -1,0 +1,100 @@
+# Pictures bundled into the dashboard.  Format:  name  openmoji-codepoint
+# After editing, run scripts\fetch-assets.ps1 and rebuild.
+# Artwork: OpenMoji (https://openmoji.org), CC BY-SA 4.0.
+
+# --- weather ---
+sun              2600
+moon             1F319
+sun-small-cloud  1F324
+sun-cloud        26C5
+cloud            2601
+fog              1F32B
+rain             1F327
+sun-rain         1F326
+snow             1F328
+thunder          26C8
+wind             1F32C
+
+# --- part of day ---
+morning          1F305
+afternoon        1F31E
+evening          1F307
+night            1F634
+
+# --- seasons ---
+spring           1F337
+summer           1F3D6
+autumn           1F341
+winter           2603
+
+# --- what to wear ---
+coat             1F9E5
+scarf            1F9E3
+gloves           1F9E4
+tshirt           1F455
+shorts           1FA73
+umbrella         2614
+boots            1F97E
+sunglasses       1F576
+cap              1F9E2
+
+# --- events ---
+calendar         1F4C5
+star             2B50
+cake             1F382
+party            1F389
+balloon          1F388
+gift             1F381
+school           1F3EB
+backpack         1F392
+doctor           1FA7A
+dentist          1F9B7
+hospital         1F3E5
+swim             1F3CA
+soccer           26BD
+basketball       1F3C0
+baseball         26BE
+ballet           1FA70
+gymnastics       1F938
+music            1F3B5
+piano            1F3B9
+guitar           1F3B8
+art              1F3A8
+books            1F4DA
+movie            1F3AC
+playground       1F6DD
+zoo              1F981
+beach            1F3DD
+camping          26FA
+grandma          1F475
+grandpa          1F474
+family           1F46A
+baby             1F476
+teddy            1F9F8
+plane            2708
+car              1F697
+train            1F686
+bus              1F68C
+bike             1F6B2
+christmas-tree   1F384
+santa            1F385
+pumpkin          1F383
+bunny            1F430
+turkey           1F983
+fireworks        1F386
+heart            2764
+scissors         2702
+pizza            1F355
+ice-cream        1F366
+picnic           1F9FA
+dog              1F436
+cat              1F431
+church           26EA
+shopping         1F6D2
+sled             1F6F7
+tooth-fairy      1F9DA
+house            1F3E0
+bath             1F6C1
+farm             1F69C
+circus           1F3AA
+unlocked         1F513
