@@ -44,7 +44,16 @@ type openMeteo struct {
 	} `json:"daily"`
 }
 
-var httpClient = &http.Client{Timeout: 25 * time.Second}
+// The Kindle's CPU and Wi-Fi are slow to set up a TLS connection, so allow
+// longer than Go's default 10-second handshake.
+var httpClient = &http.Client{
+	Timeout: 40 * time.Second,
+	Transport: func() *http.Transport {
+		t := http.DefaultTransport.(*http.Transport).Clone()
+		t.TLSHandshakeTimeout = 20 * time.Second
+		return t
+	}(),
+}
 
 func httpGet(url string) ([]byte, error) {
 	resp, err := httpClient.Get(url)

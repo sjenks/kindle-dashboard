@@ -18,6 +18,16 @@ echo "$(date) starting ($*)"
 # Give KUAL a moment to close its menu.
 sleep 3
 
+# Weather and calendars need the network: switch Wi-Fi on and give it up to a
+# minute to connect.  The dashboard retries on its own if it is still not up.
+lipc-set-prop com.lab126.cmd wirelessEnable 1
+i=0
+while [ "$(lipc-get-prop com.lab126.wifid cmState 2>/dev/null)" != "CONNECTED" ] && [ $i -lt 60 ]; do
+	sleep 1
+	i=$((i + 1))
+done
+echo "$(date) wifi: $(lipc-get-prop com.lab126.wifid cmState 2>/dev/null) after ${i}s"
+
 # Keep the Kindle awake, hide its status bar, and freeze its window manager so
 # the normal interface neither redraws over the dashboard nor reacts to input.
 lipc-set-prop com.lab126.powerd preventScreenSaver 1

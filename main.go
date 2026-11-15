@@ -91,31 +91,40 @@ func (a *App) scene(now time.Time) Scene {
 // fetch refreshes weather and calendars when they are due.  It reports
 // whether anything was fetched.  A failed attempt is retried sooner.
 func (a *App) fetch(now time.Time) bool {
-	due := func(tried time.Time, ok bool, minutes int) bool {
+	due := func(tried time.Time, ok, have bool, minutes int) bool {
 		if now.IsZero() || tried.IsZero() {
 			return true
 		}
 		if !ok {
 			minutes = 3
+			if !have {
+				// Nothing to show yet ("Weather is loading"): keep trying every minute.
+				minutes = 1
+			}
 		}
 		return now.Sub(tried) >= time.Duration(minutes)*time.Minute
 	}
 
+	a.mu.Lock()
+	haveWeather := a.weather != nil
+	a.mu.Unlock()
+
 	changed := false
-	if due(a.weatherTried, a.weatherOK, a.cfg.WeatherMinutes) {
+	if due(a.weatherTried, a.weatherOK, haveWeather, a.cfg.WeatherMinutes) {
 		a.weatherTried = now
 		w, err := fetchWeather(a.cfg)
 		a.weatherOK = err == nil
 		if err != nil {
 			log.Printf("weather: %v", err)
 		} else {
+			log.Printf("weather: ok, %.0f° code %d", w.Temp, w.Code)
 			a.mu.Lock()
 			a.weather = w
 			a.mu.Unlock()
 			changed = true
 		}
 	}
-	if len(a.cfg.Calendars) > 0 && due(a.calendarsTried, a.calendarsOK, a.cfg.CalendarMinutes) {
+	if len(a.cfg.Calendars) > 0 && due(a.calendarsTried, a.calendarsOK, true, a.cfg.CalendarMinutes) {
 		a.calendarsTried = now
 		a.calendarsOK = fetchCalendars(a.cfg)
 		changed = true
