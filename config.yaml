@@ -3,13 +3,13 @@
 
 # Where you live: used for the clock, the weather and the season.
 # Find your timezone name at https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-timezone: America/New_York
+timezone: America/Los_Angeles
 location:
-  latitude: 40.7128
-  longitude: -74.0060
+  latitude: 47.6062
+  longitude: -122.3321
 
 units: fahrenheit     # fahrenheit or celsius
-clock: 12h            # 12h or 24h
+clock: 24h            # 12h or 24h
 week_start: sunday    # sunday or monday
 
 # Calendar feeds (private ICS links from Google Calendar, iCloud, Outlook...).
@@ -33,7 +33,7 @@ keywords: {}
 # Use the "Button test" entry in KUAL to see which button is "prev" and "next".
 lock:
   enabled: true
-  unlock_sequence: [next, next, prev, prev, next, prev, next, next]
+  unlock_sequence: [next, next, prev, prev]
   timeout_seconds: 10
   # Also switch off the power button (experimental).  If you get stuck, holding
   # the power button for 40 seconds always restarts the Kindle.
