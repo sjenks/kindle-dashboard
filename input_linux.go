@@ -16,6 +16,7 @@ const (
 	evKey = 0x01
 	evAbs = 0x03
 
+	absPressure    = 0x18
 	absMTPositionX = 0x35
 	btnTouch       = 0x14a
 
@@ -57,8 +58,13 @@ func hasBit(bits []byte, n int) bool {
 // buttons are grabbed too and their presses are delivered on the returned
 // channel.  The grabs vanish automatically when this process exits, however
 // it exits, so a crash can never leave the Kindle unusable.
-func startInput(cfg *Config) (<-chan uint16, func()) {
+//
+// The returned orientation channel carries the Kindle's motion sensor: how
+// many quarter turns clockwise the Kindle now is from upright (0-3).  It is
+// only read when display.orientation is "auto".
+func startInput(cfg *Config) (<-chan uint16, <-chan int, func()) {
 	keys := make(chan uint16, 64)
+	orient := make(chan int, 8)
 	var held []*os.File
 
 	for i := 0; i < 32; i++ {
@@ -76,6 +82,16 @@ func startInput(cfg *Config) (<-chan uint16, func()) {
 		hasPower := hasBit(keyBits, keyPower)
 		hasPage := hasBit(keyBits, keyPageUp) || hasBit(keyBits, keyPageDown) ||
 			hasBit(keyBits, keyLPgBack) || hasBit(keyBits, keyLPgFwd)
+
+		// The Oasis accelerometer reports its position as EV_ABS:ABS_PRESSURE
+		// (see KOReader's frontend/device/kindle/device.lua).
+		isSensor := !isTouch && hasBit(absBits, absPressure)
+		if isSensor && cfg.autoRotate() {
+			log.Printf("input: %s %q motion sensor", path, name)
+			held = append(held, f)
+			go readSensor(f, orient)
+			continue
+		}
 
 		grab, read := false, false
 		switch {
@@ -117,7 +133,7 @@ func startInput(cfg *Config) (<-chan uint16, func()) {
 			f.Close()
 		}
 	}
-	return keys, release
+	return keys, orient, release
 }
 
 // readKeys forwards key-down events from one device.
@@ -139,6 +155,39 @@ func readKeys(f *os.File, keys chan<- uint16) {
 				select {
 				case keys <- code:
 				default: // nobody listening fast enough; drop it
+				}
+			}
+		}
+	}
+}
+
+// Oasis 2/3 accelerometer positions (drivers/input/misc/accel/bma2x2.c), as
+// clockwise quarter turns from upright.
+var sensorTurns = map[int32]int{
+	15: 0, // portrait, upright
+	17: 1, // landscape: turned clockwise
+	16: 2, // portrait, upside down
+	18: 3, // landscape: turned counter-clockwise
+}
+
+// readSensor forwards position changes from the motion sensor.
+func readSensor(f *os.File, orient chan<- int) {
+	evSize := int(unsafe.Sizeof(syscall.Timeval{})) + 8
+	buf := make([]byte, evSize*16)
+	for {
+		n, err := f.Read(buf)
+		if err != nil {
+			return
+		}
+		for off := 0; off+evSize <= n; off += evSize {
+			ev := buf[off+evSize-8:]
+			typ := binary.LittleEndian.Uint16(ev[0:])
+			code := binary.LittleEndian.Uint16(ev[2:])
+			value := int32(binary.LittleEndian.Uint32(ev[4:]))
+			if t, ok := sensorTurns[value]; ok && typ == evAbs && code == absPressure {
+				select {
+				case orient <- t:
+				default:
 				}
 			}
 		}

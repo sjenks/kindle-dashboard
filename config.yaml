@@ -43,7 +43,9 @@ lock:
   grab_power_button: false
 
 display:
-  # portrait, landscape, or landscape-flipped (landscape turned the other way
-  # round: if the picture comes out upside down, switch between the two).
-  orientation: portrait
+  # auto: follow the Kindle as it is turned (portrait either way up, and
+  # landscape).  Or fix it: portrait, landscape, or landscape-flipped
+  # (landscape turned the other way round: if the picture comes out upside
+  # down, switch between the two).
+  orientation: auto
   full_refresh_every: 30   # do a flashing clean-up refresh every N minutes

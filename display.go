@@ -15,10 +15,22 @@ import (
 // Display pushes finished frames to the e-ink screen.  It prefers FBInk when
 // one is installed (better refresh control) and falls back to the stock eips.
 type Display struct {
-	fbink string // path to fbink, or "" to use eips
-	W, H  int // page size as the viewer sees it
-	rot   int // quarter turn applied to each frame: 1 clockwise, -1 counter-clockwise, 0 none
-	tmp   string
+	fbink            string // path to fbink, or "" to use eips
+	nativeW, nativeH int    // the screen as fbink/eips address it
+	W, H             int    // page size as the viewer sees it
+	turns            int    // clockwise quarter turns applied to each frame: 0-3
+	tmp              string
+}
+
+// setTurns sets how far each frame is turned on its way to the screen, and
+// with it the page size the viewer sees.
+func (d *Display) setTurns(t int) {
+	d.turns = ((t % 4) + 4) % 4
+	if d.turns%2 == 1 {
+		d.W, d.H = d.nativeH, d.nativeW
+	} else {
+		d.W, d.H = d.nativeW, d.nativeH
+	}
 }
 
 func openDisplay(cfg *Config) *Display {
@@ -58,12 +70,15 @@ func openDisplay(cfg *Config) *Display {
 	// The screen itself stays as the Kindle left it (normally upright).  When
 	// the dashboard wants the other orientation, frames are drawn sideways and
 	// turned a quarter on their way out; from here on W and H describe the
-	// page as the child sees it.
-	if (d.W > d.H) != cfg.landscape() {
-		d.W, d.H = d.H, d.W
-		d.rot = 1
+	// page as the child sees it.  With "auto", the motion sensor sets the turn
+	// later (see App.run).
+	d.nativeW, d.nativeH = d.W, d.H
+	d.setTurns(0)
+	if !cfg.autoRotate() && (d.W > d.H) != cfg.landscape() {
 		if cfg.Display.Orientation == "landscape-flipped" {
-			d.rot = -1
+			d.setTurns(3)
+		} else {
+			d.setTurns(1)
 		}
 	}
 
@@ -97,8 +112,13 @@ func writePNG(path string, img image.Image) error {
 // Show draws the frame.  full asks for a flashing refresh, which clears the
 // ghosting that quiet updates slowly build up.
 func (d *Display) Show(img *image.Gray, full bool) error {
-	if d.rot != 0 {
-		img = rotate90(img, d.rot > 0)
+	switch d.turns {
+	case 1:
+		img = rotate90(img, true)
+	case 2:
+		img = rotate180(img)
+	case 3:
+		img = rotate90(img, false)
 	}
 	if err := writePNG(d.tmp, img); err != nil {
 		return err

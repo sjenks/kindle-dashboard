@@ -43,7 +43,8 @@ type Config struct {
 		Width            int `yaml:"width"`
 		Height           int `yaml:"height"`
 		FullRefreshEvery int `yaml:"full_refresh_every"`
-		// "portrait", "landscape" or "landscape-flipped"
+		// "auto" (follow the Kindle as it is turned), "portrait", "landscape"
+		// or "landscape-flipped"
 		Orientation string `yaml:"orientation"`
 	} `yaml:"display"`
 
@@ -104,14 +105,19 @@ func loadConfig(path string) (*Config, error) {
 	switch cfg.Display.Orientation {
 	case "":
 		cfg.Display.Orientation = "portrait"
-	case "portrait", "landscape", "landscape-flipped":
+	case "auto", "portrait", "landscape", "landscape-flipped":
 	default:
-		return nil, fmt.Errorf("display.orientation %q: want portrait, landscape or landscape-flipped", cfg.Display.Orientation)
+		return nil, fmt.Errorf("display.orientation %q: want auto, portrait, landscape or landscape-flipped", cfg.Display.Orientation)
 	}
 	if cfg.Display.FullRefreshEvery <= 0 {
 		cfg.Display.FullRefreshEvery = 30
 	}
 	return cfg, nil
+}
+
+// autoRotate reports whether the dashboard follows the Kindle as it is turned.
+func (c *Config) autoRotate() bool {
+	return c.Display.Orientation == "auto"
 }
 
 // landscape reports whether the dashboard should be drawn sideways.

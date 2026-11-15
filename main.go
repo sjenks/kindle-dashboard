@@ -25,6 +25,8 @@ func main() {
 	nowFlag := flag.String("now", "", "pretend it is this time, e.g. 2026-12-24T08:30 (with -preview)")
 	offline := flag.Bool("offline", false, "with -preview: use cached weather and calendars only")
 	keytest := flag.Bool("keytest", false, "show which buttons are pressed for 30 seconds, then exit")
+	nettest := flag.Bool("nettest", false, "try reaching the weather service a few ways, show the results, then exit")
+	startOrient := flag.String("orientation", "", "which way up the Kindle is held at start (U, R, D or L, from lipc com.lab126.winmgr accelerometer); used with display.orientation: auto")
 	flag.Parse()
 
 	cfg, err := loadConfig(*configPath)
@@ -60,14 +62,18 @@ func main() {
 	}
 
 	disp := openDisplay(cfg)
-	keys, release := startInput(cfg)
+	keys, orient, release := startInput(cfg)
 	defer release()
 
 	if *keytest {
 		runKeytest(cfg, disp, keys)
 		return
 	}
-	(&App{cfg: cfg, disp: disp}).run(keys)
+	if *nettest {
+		runNettest(cfg, disp)
+		return
+	}
+	(&App{cfg: cfg, disp: disp}).run(keys, orient, *startOrient)
 }
 
 type App struct {
@@ -139,9 +145,19 @@ func (a *App) reloadEvents(now time.Time) {
 	a.mu.Unlock()
 }
 
-func (a *App) run(keys <-chan uint16) {
+func (a *App) run(keys <-chan uint16, orient <-chan int, startOrient string) {
 	cfg := a.cfg
 	now := func() time.Time { return time.Now().In(cfg.loc) }
+
+	// Following the Kindle as it turns.  fbink draws the way the Kindle's own
+	// screen was facing when we started, so turns are counted from there.
+	base, held := 0, 0
+	if cfg.autoRotate() {
+		base, held = rotationBase(startOrient)
+		a.disp.setTurns(frameTurns(held, base))
+		log.Printf("orientation: auto, started held %q", startOrient)
+	}
+	var settle <-chan time.Time // fires once the Kindle has stopped moving
 
 	a.weather = loadCachedWeather(cfg)
 	a.reloadEvents(now())
@@ -199,6 +215,16 @@ func (a *App) run(keys <-chan uint16) {
 			// The Kindle's own screensaver was just on screen; repaint over it.
 			time.Sleep(1500 * time.Millisecond)
 			draw(true)
+		case t := <-orient:
+			held = t
+			settle = time.After(time.Second)
+		case <-settle:
+			settle = nil
+			if ft := frameTurns(held, base); ft != a.disp.turns {
+				log.Printf("orientation: turned %d quarter(s) clockwise from upright", held)
+				a.disp.setTurns(ft)
+				draw(true)
+			}
 		case code := <-keys:
 			if matcher.press(code, time.Now()) {
 				log.Printf("unlock sequence entered; exiting")
@@ -261,4 +287,25 @@ func runKeytest(cfg *Config, disp *Display, keys <-chan uint16) {
 			return
 		}
 	}
+}
+
+// orientationTurns maps lipc's accelerometer letters to clockwise quarter turns.
+var orientationTurns = map[string]int{"U": 0, "R": 1, "D": 2, "L": 3}
+
+// rotationBase works out, from how the Kindle was held at start, which way
+// up its screen was facing (base) and how it is held now (held), both as
+// clockwise quarter turns from upright.  The Kindle's home screen and KUAL
+// only ever face upright or upside down, never sideways.
+func rotationBase(start string) (base, held int) {
+	held = orientationTurns[start]
+	if held == 2 {
+		base = 2
+	}
+	return base, held
+}
+
+// frameTurns is how far to turn each frame so it reads upright for someone
+// holding the Kindle turned held quarters clockwise, on a screen facing base.
+func frameTurns(held, base int) int {
+	return ((base-held)%4 + 4) % 4
 }

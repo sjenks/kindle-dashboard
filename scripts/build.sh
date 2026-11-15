@@ -35,8 +35,8 @@ echo "Built $ext"
 if [ "$1" = "--install" ]; then
 	kindle=/Volumes/Kindle
 	[ -d "$kindle/extensions" ] || { echo "No Kindle with an extensions folder at $kindle" >&2; exit 1; }
-	# Keep the Kindle's log between installs, and its calendars.txt if there is
-	# none here; replace everything else.
+	# Keep the Kindle's log and download cache between installs, and its
+	# calendars.txt if there is none here; replace everything else.
 	rm -rf "$kindle/extensions/kidsdash.new"
 	cp -R "$ext" "$kindle/extensions/kidsdash.new"
 	keep_files="kidsdash.log kidsdash.log.old"
@@ -44,6 +44,9 @@ if [ "$1" = "--install" ]; then
 	for keep in $keep_files; do
 		[ -f "$kindle/extensions/kidsdash/$keep" ] && cp "$kindle/extensions/kidsdash/$keep" "$kindle/extensions/kidsdash.new/"
 	done
+	# Keep the downloaded weather and calendars too, so a reinstall does not
+	# leave the dashboard empty until the next download.
+	[ -d "$kindle/extensions/kidsdash/cache" ] && cp -R "$kindle/extensions/kidsdash/cache" "$kindle/extensions/kidsdash.new/"
 	rm -rf "$kindle/extensions/kidsdash"
 	mv "$kindle/extensions/kidsdash.new" "$kindle/extensions/kidsdash"
 	# Drop the ._* metadata files macOS writes on FAT volumes.

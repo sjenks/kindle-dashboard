@@ -32,12 +32,18 @@ echo "$(date) wifi: $(lipc-get-prop com.lab126.wifid cmState 2>/dev/null) after 
 # the normal interface neither redraws over the dashboard nor reacts to input.
 lipc-set-prop com.lab126.powerd preventScreenSaver 1
 lipc-set-prop com.lab126.pillow disableEnablePillow disable
+# Which way up the Kindle is held, for display.orientation: auto.  Asked now,
+# because the window manager answers this and is about to be frozen.
+ORIENT="$(lipc-get-prop com.lab126.winmgr accelerometer 2>/dev/null)"
+echo "$(date) held: $ORIENT"
 killall -STOP awesome
 
 if [ "$1" = "keytest" ]; then
-	"$DIR/bin/kidsdash" -config "$DIR/config.yaml" -keytest
+	"$DIR/bin/kidsdash" -config "$DIR/config.yaml" -orientation "$ORIENT" -keytest
+elif [ "$1" = "nettest" ]; then
+	"$DIR/bin/kidsdash" -config "$DIR/config.yaml" -orientation "$ORIENT" -nettest
 else
-	"$DIR/bin/kidsdash" -config "$DIR/config.yaml"
+	"$DIR/bin/kidsdash" -config "$DIR/config.yaml" -orientation "$ORIENT"
 fi
 echo "$(date) dashboard exited with status $?"
 

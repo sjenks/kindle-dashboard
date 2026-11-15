@@ -52,10 +52,17 @@ buttons returns to the normal Kindle.
 
 ## Portrait or landscape
 
-`display.orientation` in `config.yaml` is `portrait`, `landscape` or
-`landscape-flipped`. Landscape has its own layout. The dashboard does not
-follow the Kindle as it is turned; if landscape comes out upside down for the
-way the Kindle is propped up, switch to the other landscape setting.
+`display.orientation` in `config.yaml` is `auto`, `portrait`, `landscape` or
+`landscape-flipped`.
+
+- `auto` follows the Kindle as it is turned, using the Oasis motion sensor:
+  portrait either way up, and landscape with its own layout. It redraws once
+  the Kindle has been still for a second.
+- The others fix the orientation. If landscape comes out upside down for the
+  way the Kindle is propped up, switch to the other landscape setting.
+
+The page-turn buttons keep their names whichever way the Kindle is turned, so
+the unlock sequence is always pressed on the same physical buttons.
 
 ## Good to know
 

@@ -383,6 +383,20 @@ func rotate90(src *image.Gray, clockwise bool) *image.Gray {
 	return dst
 }
 
+// rotate180 turns a frame upside down.
+func rotate180(src *image.Gray) *image.Gray {
+	w, h := src.Bounds().Dx(), src.Bounds().Dy()
+	dst := image.NewGray(image.Rect(0, 0, w, h))
+	for y := 0; y < h; y++ {
+		row := src.Pix[y*src.Stride : y*src.Stride+w]
+		out := dst.Pix[(h-1-y)*dst.Stride:]
+		for x, v := range row {
+			out[w-1-x] = v
+		}
+	}
+	return dst
+}
+
 func toGray(src *image.RGBA) *image.Gray {
 	b := src.Bounds()
 	dst := image.NewGray(b)

@@ -16,6 +16,13 @@
 					"action": "./bin/start.sh",
 					"params": "keytest",
 					"exitmenu": true
+				},
+				{
+					"name": "Network test (weather)",
+					"priority": 3,
+					"action": "./bin/start.sh",
+					"params": "nettest",
+					"exitmenu": true
 				}
 			]
 		}

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -46,17 +49,36 @@ type openMeteo struct {
 
 // The Kindle's CPU and Wi-Fi are slow to set up a TLS connection, so allow
 // longer than Go's default 10-second handshake.
+//
+// Classic key exchange only: Go's default post-quantum key share makes the
+// TLS ClientHello too big for one packet, and on the Kindle's Wi-Fi the
+// handshake with the weather service then stalls every time (the Network
+// test in KUAL showed "https default" failing where "https classic" works).
 var httpClient = &http.Client{
 	Timeout: 40 * time.Second,
 	Transport: func() *http.Transport {
 		t := http.DefaultTransport.(*http.Transport).Clone()
 		t.TLSHandshakeTimeout = 20 * time.Second
+		t.TLSClientConfig = &tls.Config{CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256}}
 		return t
 	}(),
 }
 
 func httpGet(url string) ([]byte, error) {
-	resp, err := httpClient.Get(url)
+	// Home routers sometimes fumble a DNS answer ("no such host") and get it
+	// right a moment later, so retry lookups a few times before giving up.
+	var resp *http.Response
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		if attempt > 0 {
+			time.Sleep(3 * time.Second)
+		}
+		resp, err = httpClient.Get(url)
+		var dnsErr *net.DNSError
+		if err == nil || !errors.As(err, &dnsErr) {
+			break
+		}
+	}
 	if err != nil {
 		return nil, err
 	}

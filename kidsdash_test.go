@@ -168,3 +168,51 @@ func TestCalendarsFile(t *testing.T) {
 		t.Errorf("without calendars.txt: %v, %v", cfg.Calendars, err)
 	}
 }
+
+func TestRotate180(t *testing.T) {
+	src := image.NewGray(image.Rect(0, 0, 3, 2))
+	copy(src.Pix, []byte{1, 2, 3, 4, 5, 6})
+	got := rotate180(src)
+	if want := []byte{6, 5, 4, 3, 2, 1}; string(got.Pix) != string(want) {
+		t.Errorf("rotate180 = %v, want %v", got.Pix, want)
+	}
+}
+
+func TestAutoRotation(t *testing.T) {
+	// Each frame must be turned against the way the Kindle is turned, counted
+	// from the way its screen faced at start.
+	cases := []struct {
+		start string
+		now   int // quarter turns clockwise from upright, from the motion sensor
+		want  int // clockwise quarter turns applied to the frame
+	}{
+		{"U", 0, 0},
+		{"U", 1, 3},
+		{"U", 2, 2},
+		{"U", 3, 1},
+		{"D", 2, 0}, // started upside down: the home screen was upside down too
+		{"D", 0, 2},
+		{"R", 1, 3}, // started sideways: the home screen was still upright
+		{"", 0, 0},  // unknown: assume upright
+	}
+	for _, c := range cases {
+		base, _ := rotationBase(c.start)
+		if got := frameTurns(c.now, base); got != c.want {
+			t.Errorf("start %q, held %d: frameTurns = %d, want %d", c.start, c.now, got, c.want)
+		}
+	}
+	if _, held := rotationBase("R"); held != 1 {
+		t.Errorf("rotationBase(R) held = %d, want 1", held)
+	}
+
+	d := &Display{nativeW: 1264, nativeH: 1680}
+	for turns, landscape := range []bool{false, true, false, true} {
+		d.setTurns(turns)
+		if (d.W > d.H) != landscape {
+			t.Errorf("setTurns(%d): page %dx%d", turns, d.W, d.H)
+		}
+	}
+	if d.setTurns(-1); d.turns != 3 {
+		t.Errorf("setTurns(-1) = %d, want 3", d.turns)
+	}
+}
