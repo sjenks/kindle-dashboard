@@ -81,5 +81,8 @@ the unlock sequence is always pressed on the same physical buttons.
 Go lives in `.tools\` (nothing is installed system-wide). `. .\scripts\env.ps1`
 puts it on the path for the current shell; then `go test ./...`.
 
-Pictures are from [OpenMoji](https://openmoji.org) (CC BY-SA 4.0); the font is
-Lilita One (OFL).
+## License
+
+The code is under the MIT License (see `LICENSE`). The bundled artwork keeps
+its own licenses: pictures are from [OpenMoji](https://openmoji.org)
+(CC BY-SA 4.0) and the font is Lilita One (SIL Open Font License).
