@@ -68,10 +68,14 @@ func runNettest(cfg *Config, disp *Display) {
 			log.Printf("display: %v", err)
 		}
 	}
+	show(true)
+	if !wifiUp(time.Minute) {
+		lines = append(lines, "Wi-Fi did not connect")
+	}
 	addrs, err := net.LookupHost(nettestHost)
 	lines = append(lines, fmt.Sprintf("address: %v %v", addrs, errOrEmpty(err)))
 	log.Printf("nettest: %s", lines[len(lines)-1])
-	show(true)
+	show(false)
 	// First the way the dashboard itself fetches (classic TLS, DNS retries).
 	start := time.Now()
 	_, err = httpGet(nettestCases()[0].url)

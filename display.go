@@ -125,7 +125,9 @@ func (d *Display) Show(img *image.Gray, full bool) error {
 	}
 	var cmd *exec.Cmd
 	if d.fbink != "" {
-		args := []string{"-q", "-g", "file=" + d.tmp}
+		// -w: wait until the screen has finished changing, so the Kindle
+		// is never put to sleep halfway through drawing.
+		args := []string{"-q", "-w", "-g", "file=" + d.tmp}
 		if full {
 			args = append(args, "-f")
 		}

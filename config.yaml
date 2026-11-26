@@ -24,6 +24,10 @@ calendars_file: calendars.txt
 events_file: events.yaml
 days_ahead: 60        # how far ahead to look for events
 
+# How often to fetch, in minutes.  Wi-Fi is switched on only for that.
+weather_minutes: 60
+calendar_minutes: 60
+
 # Extra words that pick a picture for calendar events (word in title: picture).
 # Pictures are the names in assets\manifest.txt, or files in the pictures folder.
 keywords: {}
@@ -32,7 +36,8 @@ keywords: {}
 
 # The child lock.  While the dashboard is showing, the touchscreen is switched
 # off.  To get back to the normal Kindle, pause for two seconds, then press this
-# sequence on the page-turn buttons within timeout_seconds.
+# sequence on the page-turn buttons within timeout_seconds.  While the Kindle
+# is asleep between redraws, press the power button first to wake it.
 # Use the "Button test" entry in KUAL to see which button is "prev" and "next".
 lock:
   enabled: true
@@ -42,10 +47,19 @@ lock:
   # the power button for 40 seconds always restarts the Kindle.
   grab_power_button: false
 
+# Battery.  Between redraws the Kindle sleeps (the picture stays on the
+# screen without power) and an alarm wakes it for the next one.
+power:
+  sleep: true
+  wifi_always_on: false     # true: keep Wi-Fi connected (uses much more battery)
+  stay_awake_seconds: 60    # after the power button wakes it, for unlocking
+
 display:
   # auto: follow the Kindle as it is turned (portrait either way up, and
   # landscape).  Or fix it: portrait, landscape, or landscape-flipped
   # (landscape turned the other way round: if the picture comes out upside
   # down, switch between the two).
   orientation: auto
+  clock_minutes: 5         # redraw every N minutes: the clock moves in steps of N
   full_refresh_every: 30   # do a flashing clean-up refresh every N minutes
+  frontlight: 0            # 0 (off) to 24; -1 leaves it as it was

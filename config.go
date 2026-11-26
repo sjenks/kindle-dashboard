@@ -39,10 +39,24 @@ type Config struct {
 		GrabPowerButton bool     `yaml:"grab_power_button"`
 	} `yaml:"lock"`
 
+	Power struct {
+		// Deep sleep between redraws, woken by an alarm.
+		Sleep bool `yaml:"sleep"`
+		// Keep Wi-Fi on all the time instead of only while fetching.
+		WifiAlwaysOn bool `yaml:"wifi_always_on"`
+		// How long to stay awake after the power button wakes the Kindle.
+		StayAwakeSeconds int `yaml:"stay_awake_seconds"`
+	} `yaml:"power"`
+
 	Display struct {
-		Width            int `yaml:"width"`
-		Height           int `yaml:"height"`
+		Width  int `yaml:"width"`
+		Height int `yaml:"height"`
+		// Redraw every N minutes (the clock moves in steps of N).
+		ClockMinutes int `yaml:"clock_minutes"`
+		// Flashing clean-up refresh every N minutes.
 		FullRefreshEvery int `yaml:"full_refresh_every"`
+		// Front light while the dashboard shows: 0 (off) to 24, or -1 to leave it.
+		Frontlight *int `yaml:"frontlight"`
 		// "auto" (follow the Kindle as it is turned), "portrait", "landscape"
 		// or "landscape-flipped"
 		Orientation string `yaml:"orientation"`
@@ -59,6 +73,7 @@ func loadConfig(path string) (*Config, error) {
 	}
 	cfg := &Config{}
 	cfg.Lock.Enabled = true
+	cfg.Power.Sleep = true
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
@@ -91,7 +106,7 @@ func loadConfig(path string) (*Config, error) {
 		cfg.DaysAhead = 60
 	}
 	if cfg.WeatherMinutes <= 0 {
-		cfg.WeatherMinutes = 30
+		cfg.WeatherMinutes = 60
 	}
 	if cfg.CalendarMinutes <= 0 {
 		cfg.CalendarMinutes = 60
@@ -111,6 +126,22 @@ func loadConfig(path string) (*Config, error) {
 	}
 	if cfg.Display.FullRefreshEvery <= 0 {
 		cfg.Display.FullRefreshEvery = 30
+	}
+	if cfg.Display.ClockMinutes <= 0 {
+		cfg.Display.ClockMinutes = 5
+	}
+	if cfg.Display.ClockMinutes > 60 {
+		cfg.Display.ClockMinutes = 60
+	}
+	if cfg.Display.Frontlight == nil {
+		off := 0
+		cfg.Display.Frontlight = &off
+	}
+	if *cfg.Display.Frontlight > 24 {
+		*cfg.Display.Frontlight = 24
+	}
+	if cfg.Power.StayAwakeSeconds <= 0 {
+		cfg.Power.StayAwakeSeconds = 60
 	}
 	return cfg, nil
 }
