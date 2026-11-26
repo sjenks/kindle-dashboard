@@ -52,6 +52,7 @@ type Scene struct {
 	Now     time.Time
 	Weather *Weather
 	Events  []Event
+	Battery *Battery // nil off the Kindle
 }
 
 type Canvas struct {
@@ -355,6 +356,7 @@ func render(cfg *Config, sc Scene, w, h int) *image.Gray {
 		c.drawWeather(sc, margin+600, 304, 576, 520)
 		c.drawForecastTall(sc, margin+1200, 304, inner-1200, 520)
 		c.drawEventsWide(sc, margin, 848, inner, 372)
+		c.drawBattery(sc, margin+inner, 1252)
 	} else {
 		c.drawHeader(sc, margin, inner)
 		c.drawWeek(sc, margin, 318, inner, 96)
@@ -362,6 +364,7 @@ func render(cfg *Config, sc Scene, w, h int) *image.Gray {
 		c.drawWeather(sc, margin+600, 446, 576, 520)
 		c.drawForecast(sc, margin, 990, inner, 200)
 		c.drawEvents(sc, margin, 1214, inner, 426)
+		c.drawBattery(sc, margin+inner, 1668)
 	}
 	return toGray(c.img)
 }
@@ -458,6 +461,29 @@ func (c *Canvas) drawHeaderWide(sc Scene, x, w float64) {
 	sx := x + w - seasonSize
 	c.pic(pic, sx, 14, seasonSize)
 	c.text(label, sx-14, base, 50, dark, alignRight)
+}
+
+// drawBattery is a small line for the grown-ups along the bottom edge,
+// ending at right: a battery with the level, and roughly how long is left.
+func (c *Canvas) drawBattery(sc Scene, right, base float64) {
+	b := sc.Battery
+	if b == nil {
+		return
+	}
+	const size, bw, bh = 28.0, 40.0, 20.0
+	label := batteryLabel(*b)
+	c.text(label, right, base, size, mid, alignRight)
+
+	// The battery: an outline with a nub, filled as far as it is charged.
+	x := right - c.textWidth(label, size) - 14 - bw
+	y := base - bh
+	c.rrect(x+bw, y+6, 4, bh-12, 1, mid)
+	c.rrect(x, y, bw, bh, 4, mid)
+	c.rrect(x+3, y+3, bw-6, bh-6, 2, white)
+	fill := (bw - 10) * math.Max(0, math.Min(100, float64(b.Level))) / 100
+	if fill > 0 {
+		c.rrect(x+5, y+5, fill, bh-10, 1, mid)
+	}
 }
 
 // drawWeek shows the seven days of this week with today highlighted.

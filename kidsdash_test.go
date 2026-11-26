@@ -216,3 +216,147 @@ func TestAutoRotation(t *testing.T) {
 		t.Errorf("setTurns(-1) = %d, want 3", d.turns)
 	}
 }
+
+func TestNextTick(t *testing.T) {
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	at := func(s string) time.Time {
+		tm, err := time.ParseInLocation("2006-01-02 15:04:05", s, loc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tm
+	}
+	cases := []struct {
+		now   string
+		every int
+		want  string
+	}{
+		{"2026-11-25 10:03:20", 5, "2026-11-25 10:05:01"},
+		{"2026-11-25 10:05:00", 5, "2026-11-25 10:10:01"},
+		{"2026-11-25 10:05:01", 5, "2026-11-25 10:10:01"},
+		{"2026-11-25 23:58:00", 5, "2026-11-26 00:00:01"},
+		{"2026-11-25 10:03:20", 1, "2026-11-25 10:04:01"},
+		{"2026-11-01 01:58:00", 5, "2026-11-01 01:00:01"}, // clocks go back at 2:00
+		{"2026-03-08 03:01:00", 5, "2026-03-08 03:05:01"}, // the day clocks go forward
+	}
+	for _, c := range cases {
+		got := nextTick(at(c.now), c.every)
+		if c.now == "2026-11-01 01:58:00" {
+			// 01:58 PDT is followed by 01:00:01 PST, an hour of wall time later.
+			if d := got.Sub(at(c.now)); d != 2*time.Minute+time.Second {
+				t.Errorf("nextTick(%s) is %v later, want 2m1s", c.now, d)
+			}
+			continue
+		}
+		if !got.Equal(at(c.want)) {
+			t.Errorf("nextTick(%s, %d) = %s, want %s", c.now, c.every, got.Format("2006-01-02 15:04:05"), c.want)
+		}
+	}
+}
+
+func TestSourceDue(t *testing.T) {
+	t0 := time.Date(2026, 11, 25, 10, 0, 1, 0, time.UTC)
+	min := func(m float64) time.Time { return t0.Add(time.Duration(m * float64(time.Minute))) }
+
+	var s source
+	if !s.due(t0, 60) {
+		t.Error("never fetched: should be due")
+	}
+	s.done(t0, true)
+	if s.due(min(55), 60) || !s.due(min(59.99), 60) {
+		t.Error("after a success: due again an hour later (give or take the redraw)")
+	}
+
+	// Failures back off: 5, 10, 20, 40, then the normal hour.
+	s = source{}
+	tried := t0
+	for i, wait := range []float64{5, 10, 20, 40, 60, 60} {
+		s.done(tried, false)
+		if s.due(tried.Add(time.Duration(wait-1.5)*time.Minute), 60) {
+			t.Errorf("failure %d: due before %v minutes", i+1, wait)
+		}
+		next := tried.Add(time.Duration(wait) * time.Minute)
+		if !s.due(next, 60) {
+			t.Errorf("failure %d: not due after %v minutes", i+1, wait)
+		}
+		tried = next
+	}
+	s.done(tried, true)
+	if s.fails != 0 {
+		t.Error("a success should reset the backoff")
+	}
+}
+
+func TestPowerDefaults(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("timezone: UTC\n"), 0o644)
+	cfg, err := loadConfig(filepath.Join(dir, "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Power.Sleep || cfg.Power.WifiAlwaysOn || cfg.Power.StayAwakeSeconds != 60 ||
+		cfg.Display.ClockMinutes != 5 || *cfg.Display.Frontlight != 0 || cfg.WeatherMinutes != 60 {
+		t.Errorf("defaults: power %+v, clock %d, light %d, weather %d",
+			cfg.Power, cfg.Display.ClockMinutes, *cfg.Display.Frontlight, cfg.WeatherMinutes)
+	}
+
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("power: {sleep: false}\ndisplay: {frontlight: -1}\n"), 0o644)
+	if cfg, err = loadConfig(filepath.Join(dir, "config.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Power.Sleep || *cfg.Display.Frontlight != -1 {
+		t.Errorf("overrides not kept: sleep %v, light %d", cfg.Power.Sleep, *cfg.Display.Frontlight)
+	}
+}
+
+func TestBatteryTracker(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "battery.json")
+	t0 := time.Date(2026, 11, 25, 8, 0, 0, 0, time.UTC)
+	hours := func(h float64) time.Time { return t0.Add(time.Duration(h * float64(time.Hour))) }
+
+	b := newBatteryTracker(path)
+	if got := b.update(t0, 100, true); !got.Charging || got.Left != 0 {
+		t.Errorf("charging: %+v", got)
+	}
+	// Unplugged: no estimate until it has dropped a little over a few hours.
+	for h := 0.25; h < 3; h += 0.25 {
+		if got := b.update(hours(h), 100-int(h), false); got.Left != 0 {
+			t.Errorf("at %vh: estimate too early: %+v", h, got)
+		}
+	}
+	// 1% an hour, from 100% at 8:00: at 4h and 96%, 96 hours left.
+	if got := b.update(hours(4), 96, false); got.Left != 96*time.Hour {
+		t.Errorf("at 4h: Left = %v, want 96h", got.Left)
+	}
+
+	// Starting again keeps the baseline...
+	b = newBatteryTracker(path)
+	b.update(hours(4.5), 96, false)
+	if got := b.update(hours(5), 95, false); got.Left != 95*time.Hour {
+		t.Errorf("after restart: Left = %v, want 95h", got.Left)
+	}
+	// ...unless the dashboard was not running for a while.
+	b = newBatteryTracker(path)
+	if got := b.update(hours(9), 80, false); got.Left != 0 {
+		t.Errorf("after a gap: %+v, want no estimate", got)
+	}
+}
+
+func TestBatteryLabel(t *testing.T) {
+	cases := []struct {
+		b    Battery
+		want string
+	}{
+		{Battery{Level: 82}, "82%"},
+		{Battery{Level: 82, Charging: true}, "82%  charging"},
+		{Battery{Level: 82, Left: 9*24*time.Hour + 5*time.Hour}, "82%  about 9 days left"},
+		{Battery{Level: 10, Left: 20 * time.Hour}, "10%  about 20 hours left"},
+		{Battery{Level: 3, Left: 70 * time.Minute}, "3%  about 1 hour left"},
+		{Battery{Level: 1, Left: 30 * time.Minute}, "1%  charge now"},
+	}
+	for _, c := range cases {
+		if got := batteryLabel(c.b); got != c.want {
+			t.Errorf("batteryLabel(%+v) = %q, want %q", c.b, got, c.want)
+		}
+	}
+}

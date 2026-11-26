@@ -44,8 +44,12 @@ buttons returns to the normal Kindle.
   the page-turn buttons within `timeout_seconds`. One wrong press spoils the
   attempt until the next two-second pause, so button mashing does not get
   through.
-- The power button still puts the Kindle to sleep; the dashboard redraws on
-  wake. `grab_power_button: true` switches it off too (experimental).
+- Between redraws the Kindle is asleep and the buttons do nothing. Press the
+  power button to wake it: it then stays awake for `stay_awake_seconds`
+  (60), long enough to pause and enter the sequence. Every button press
+  restarts that wait.
+- `grab_power_button: true` keeps the Kindle's own software from seeing the
+  power button at all (experimental).
 - Escape hatch: holding the power button for about 40 seconds restarts the
   Kindle, which comes back as a normal Kindle. The lock cannot outlive the
   dashboard process.
@@ -66,7 +70,16 @@ the unlock sequence is always pressed on the same physical buttons.
 
 ## Good to know
 
-- The dashboard keeps the Kindle awake with Wi-Fi on, so leave it on a charger.
+- Battery: the dashboard redraws every 5 minutes (`clock_minutes`) and puts
+  the Kindle into its deep sleep in between, with an alarm to wake it for the
+  next redraw; the e-ink screen keeps the picture without power. Wi-Fi is
+  switched on only to fetch the weather and calendars (hourly), and the front
+  light is off. Wi-Fi and the light are put back as they were on unlock. The
+  log has a battery line every hour, to see how long a charge lasts.
+  `power.sleep: false` keeps the Kindle awake instead (about a day on a charge).
+- With `orientation: auto`, the Kindle notices being turned only while it is
+  awake. If the picture does not turn by the next redraw, press the power
+  button.
 - Weather comes from [Open-Meteo](https://open-meteo.com) (no account needed).
   Calendars are read from private ICS links; repeating events are supported
   for the common cases (daily, weekly, monthly, yearly).
